@@ -4,6 +4,7 @@ export default function Footer() {
   const links = [
     { name: "Home", path: "/" },
     { name: "Products", path: "/products" },
+    { name: "Posts", path: "/posts" },
     { name: "About", path: "/about" },
   ];
 

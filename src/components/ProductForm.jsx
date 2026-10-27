@@ -6,6 +6,7 @@ const initialForm = {
   packaging: "",
   price_per_pack: "",
   availability: "Available",
+  is_featured: false,
 };
 
 export default function ProductForm({
@@ -14,34 +15,39 @@ export default function ProductForm({
   onClose,
   submitting,
   formError,
-}) {
+  onDeleteImage,
+  deletingImageId,
+  deletingAllImages,
+})  {
   const [formData, setFormData] = useState(initialForm);
   const [images, setImages] = useState([]);
   const [imagePreviews, setImagePreviews] = useState([]);
+  const [existingImages, setExistingImages] = useState([]);
 
   const fileInputRef = useRef(null);
 
-  useEffect(() => {
-    setFormData(
-      product
-        ? {
-            product_name: product.product_name ?? "",
-            product_description: product.product_description ?? "",
-            packaging: product.packaging ?? "",
-            price_per_pack: product.price_per_pack ?? "",
-            availability: product.availability ?? "Available",
-          }
-        : initialForm,
-    );
+useEffect(() => {
+  setFormData(
+    product
+      ? {
+          product_name: product.product_name ?? "",
+          product_description: product.product_description ?? "",
+          packaging: product.packaging ?? "",
+          price_per_pack: product.price_per_pack ?? "",
+          availability: product.availability ?? "Available",
+          is_featured: product.is_featured ?? false,
+        }
+      : initialForm,
+  );
 
-    setImages([]);
-    setImagePreviews([]);
+  setImages([]);
+  setImagePreviews([]);
+  setExistingImages(product?.images || []);
 
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-  }, [product]);
-
+  if (fileInputRef.current) {
+    fileInputRef.current.value = "";
+  }
+}, [product]);
   function closeModal() {
     if (submitting) return;
 
@@ -131,12 +137,18 @@ export default function ProductForm({
     body.append("packaging", formData.packaging.trim());
     body.append("price_per_pack", formData.price_per_pack);
     body.append("availability", formData.availability);
+    body.append("is_featured", String(formData.is_featured));
+
+    const imageData = new FormData();
 
     images.forEach((image) => {
-      body.append("images", image);
+      imageData.append("images", image);
     });
 
-    await onSubmit(body);
+    await onSubmit({
+      productData: body,
+      imageData,
+    });
   }
 
   return (
@@ -293,15 +305,110 @@ export default function ProductForm({
             </div>
           </div>
 
+          {/* Featured Product */}
+          <div className="rounded-xl border border-[#D8C7A4] bg-[#F1E7D5]/50 p-4">
+            <label className="flex cursor-pointer items-start gap-3">
+              <input
+                type="checkbox"
+                name="is_featured"
+                checked={formData.is_featured}
+                onChange={(event) =>
+                  setFormData((previous) => ({
+                    ...previous,
+                    is_featured: event.target.checked,
+                  }))
+                }
+                className="mt-1 h-4 w-4 accent-[#A7833E]"
+              />
+
+              <span>
+                <span className="block text-sm font-semibold text-[#44352D]">
+                  Feature on Homepage
+                </span>
+
+                <span className="mt-1 block text-xs leading-relaxed text-[#44352D]/65">
+                  Display this product in the Featured Products section on your
+                  homepage.
+                </span>
+              </span>
+            </label>
+          </div>
+
           {/* Images */}
           <div>
             <label
               htmlFor="product_images"
               className="mb-2 block text-sm font-medium text-[#44352D]"
             >
-              {product ? "Image Management" : "Product Images *"}
+              {product ? "Manage Product Images" : "Product Images *"}
             </label>
 
+            {/* Existing Images */}
+            {product && (
+              <div className="mb-5">
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                  <p className="text-sm font-medium text-[#44352D]">
+                    Current Images ({existingImages.length})
+                  </p>
+
+                  {existingImages.length > 0 && (
+                    <button
+                      type="button"
+                      disabled={
+                        submitting ||
+                        deletingAllImages ||
+                        deletingImageId !== null
+                      }
+                      onClick={() => onDeleteImage(null)}
+                      className="text-xs font-medium text-red-700 hover:underline disabled:opacity-50"
+                    >
+                      {deletingAllImages ? "Deleting..." : "Delete All Images"}
+                    </button>
+                  )}
+                </div>
+
+                {existingImages.length === 0 ? (
+                  <p className="rounded-xl bg-[#F1E7D5] p-4 text-sm text-[#44352D]/70">
+                    This product has no saved images. Upload an image below.
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+                    {existingImages.map((image) => (
+                      <div key={image.id} className="relative">
+                        <img
+                          src={image.image_url}
+                          alt={`${product.product_name} product`}
+                          className="aspect-square w-full rounded-xl object-cover"
+                        />
+
+                        {image.is_primary && (
+                          <span className="absolute left-2 top-2 rounded-full bg-[#44352D] px-2 py-1 text-xs text-white">
+                            Primary
+                          </span>
+                        )}
+
+                        <button
+                          type="button"
+                          disabled={
+                            submitting ||
+                            deletingAllImages ||
+                            deletingImageId !== null
+                          }
+                          onClick={() => onDeleteImage(image.id)}
+                          className="mt-2 text-xs font-medium text-red-700 hover:underline disabled:opacity-50"
+                        >
+                          {deletingImageId === image.id
+                            ? "Deleting..."
+                            : "Delete Image"}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Select New Images */}
             <input
               ref={fileInputRef}
               id="product_images"
@@ -314,10 +421,11 @@ export default function ProductForm({
 
             <p className="mt-2 text-xs text-[#44352D]/55">
               {product
-                ? "Image changes are not saved when editing product details. You can manage images separately later."
+                ? "Select additional images and click Save Changes to upload them."
                 : "Select one or more images. The first image will be the primary product image."}
             </p>
 
+            {/* New Image Previews */}
             {imagePreviews.length > 0 && (
               <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3">
                 {imagePreviews.map((preview, index) => (
@@ -328,7 +436,7 @@ export default function ProductForm({
                       className="aspect-square w-full rounded-xl object-cover"
                     />
 
-                    {index === 0 && (
+                    {!product && index === 0 && (
                       <span className="absolute left-2 top-2 rounded-full bg-[#44352D] px-2 py-1 text-xs text-white">
                         Primary
                       </span>
@@ -337,9 +445,10 @@ export default function ProductForm({
                     <button
                       type="button"
                       onClick={() => removeImage(index)}
-                      className="mt-2 text-xs font-medium text-red-700 hover:underline"
+                      disabled={submitting}
+                      className="mt-2 text-xs font-medium text-red-700 hover:underline disabled:opacity-50"
                     >
-                      Remove image
+                      Remove Selected Image
                     </button>
                   </div>
                 ))}

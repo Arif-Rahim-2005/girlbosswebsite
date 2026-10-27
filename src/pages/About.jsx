@@ -1,6 +1,9 @@
 import { Link } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
+import logo from "../assets/logo.jpeg";
+
+
 export default function About() {
   return (
     <>
@@ -18,6 +21,14 @@ export default function About() {
                 <h1 className="mt-4 font-serif text-4xl font-semibold text-[#44352D] sm:text-5xl">
                   Our Story
                 </h1>
+              </div>
+
+              <div className="my-8 flex justify-center sm:mb-10">
+                <img
+                  src={logo}
+                  alt="Modesty Girlboss Enterprises logo"
+                  className="h-40 w-auto object-contain sm:h-48 md:h-56 lg:h-64 border-be-gold-500 border"
+                />
               </div>
 
               {/* Our Story */}
@@ -38,6 +49,23 @@ export default function About() {
 
                 <p className="mt-4 font-serif text-xl italic text-[#A7833E]">
                   A little sweetness, thoughtfully made
+                </p>
+
+                <h2 className="font-serif text-2xl font-semibold text-[#44352D] mt-4">
+                  Our Mission
+                </h2>
+
+                <p className="mt-4 font-serif text-xl italic text-[#A7833E]">
+                  Delivering sweet delights rooted in modesty, quality, and
+                  innovation.
+                </p>
+                <h2 className="font-serif text-2xl font-semibold text-[#44352D] mt-4">
+                  Our Vision
+                </h2>
+
+                <p className="mt-4 font-serif text-xl italic text-[#A7833E]">
+                  To redefine indulgence by blending taste, modesty, and
+                  empowerment..
                 </p>
               </div>
 

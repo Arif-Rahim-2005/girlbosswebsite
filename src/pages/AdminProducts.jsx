@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { apiRequest } from "../api/api";
-import ProductForm from "../components/PoductForm";
+import ProductForm from "../components/ProductForm";
 
 export default function AdminProducts() {
   const [products, setProducts] = useState([]);
@@ -13,7 +13,9 @@ export default function AdminProducts() {
   const [editingProduct, setEditingProduct] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
-  const [success, setSuccess] = useState("");
+    const [success, setSuccess] = useState("");
+    const [deletingImageId, setDeletingImageId] = useState(null);
+    const [deletingAllImages, setDeletingAllImages] = useState(false);
 
   async function fetchProducts() {
     try {
@@ -50,54 +52,140 @@ export default function AdminProducts() {
   }
 
   // Handle form submission and API requests
-  async function handleProductSubmit(body, validationError) {
-    if (validationError) {
-      setFormError(validationError);
-      return;
-    }
+async function handleProductSubmit(formData, validationError) {
+  if (validationError) {
+    setFormError(validationError);
+    return;
+  }
 
-    if (!body) {
-      setFormError("Please check your product details and try again.");
-      return;
-    }
+  if (!formData) {
+    setFormError("Please check your product details and try again.");
+    return;
+  }
 
-    setSubmitting(true);
-    setFormError("");
-    setSuccess("");
+  setSubmitting(true);
+  setFormError("");
+  setSuccess("");
 
-    try {
-      let data;
+  try {
+    let data;
 
-      if (editingProduct) {
-        data = await apiRequest(`/products/${editingProduct.id}`, {
-          method: "PATCH",
-          body,
-        });
-      } else {
-        data = await apiRequest("/products", {
+    if (editingProduct) {
+      // Update the existing product details
+      data = await apiRequest(`/products/${editingProduct.id}`, {
+        method: "PATCH",
+        body: formData.productData,
+      });
+
+      // Upload additional images, if any were selected
+      if (formData.imageData.getAll("images").length > 0) {
+        await apiRequest(`/products/${editingProduct.id}/images`, {
           method: "POST",
-          body,
+          body: formData.imageData,
         });
       }
+    } else {
+      // Create a new product with its initial images
+      data = await apiRequest("/products", {
+        method: "POST",
+        body: formData.productData,
+      });
+    }
 
-      setSuccess(
-        data.message ||
-          (editingProduct
-            ? "Product updated successfully."
-            : "Product added successfully."),
+    setSuccess(
+      data.message ||
+        (editingProduct
+          ? "Product updated successfully."
+          : "Product added successfully."),
+    );
+
+    setShowModal(false);
+    setEditingProduct(null);
+    setLoading(true);
+
+    await fetchProducts();
+  } catch (err) {
+    setFormError(err.message);
+  } finally {
+    setSubmitting(false);
+  }
+}
+    async function handleDeleteProduct(product) {
+      const confirmed = window.confirm(
+        `Are you sure you want to delete "${product.product_name}"? This action cannot be undone.`,
       );
 
-      setShowModal(false);
-      setEditingProduct(null);
+      if (!confirmed) return;
 
-      setLoading(true);
-      await fetchProducts();
-    } catch (err) {
-      setFormError(err.message);
-    } finally {
-      setSubmitting(false);
+      try {
+        setError("");
+
+        await apiRequest(`/products/${product.id}`, {
+          method: "DELETE",
+        });
+
+        setSuccess(`${product.product_name} was deleted successfully.`);
+
+        setLoading(true);
+        await fetchProducts();
+      } catch (err) {
+        setError(err.message);
+      }
     }
-  }
+
+    async function handleDeleteImage(imageId) {
+      if (!editingProduct) return;
+
+      const deleteAll = imageId === null;
+
+      const confirmed = window.confirm(
+        deleteAll
+          ? `Delete ALL images for "${editingProduct.product_name}"? This cannot be undone.`
+          : "Delete this product image? This cannot be undone.",
+      );
+
+      if (!confirmed) return;
+
+      if (deleteAll) {
+        setDeletingAllImages(true);
+      } else {
+        setDeletingImageId(imageId);
+      }
+
+      setFormError("");
+
+      try {
+        const endpoint = deleteAll
+          ? `/products/${editingProduct.id}/images`
+          : `/products/${editingProduct.id}/images/${imageId}`;
+
+        const data = await apiRequest(endpoint, {
+          method: "DELETE",
+        });
+
+        // Refresh the product list.
+        const refreshedData = await apiRequest("/products");
+        const refreshedProducts = refreshedData.products || [];
+
+        setProducts(refreshedProducts);
+
+        // Update the product currently being edited.
+        const updatedProduct = refreshedProducts.find(
+          (item) => item.id === editingProduct.id,
+        );
+
+        if (updatedProduct) {
+          setEditingProduct(updatedProduct);
+        }
+
+        setSuccess(data.message || "Product images updated successfully.");
+      } catch (err) {
+        setFormError(err.message);
+      } finally {
+        setDeletingImageId(null);
+        setDeletingAllImages(false);
+      }
+    }
 
   return (
     <div className="min-h-screen bg-[#F5F0E7] px-5 pb-16 pt-28 sm:px-8 lg:px-12">
@@ -232,9 +320,17 @@ export default function AdminProducts() {
 
                   <div className="p-6">
                     <div className="flex items-start justify-between gap-3">
-                      <h2 className="font-serif text-xl font-semibold text-[#44352D]">
-                        {product.product_name}
-                      </h2>
+                      <div>
+                        <h2 className="font-serif text-xl font-semibold text-[#44352D]">
+                          {product.product_name}
+                        </h2>
+
+                        {product.is_featured && (
+                          <span className="mt-2 inline-block rounded-full border border-[#D8C7A4] bg-[#F1E7D5] px-3 py-1 text-xs font-semibold text-[#8C6A2D]">
+                            ★ Featured on Homepage
+                          </span>
+                        )}
+                      </div>
 
                       <span className="shrink-0 text-sm font-semibold text-[#A7833E]">
                         KSh{" "}
@@ -261,14 +357,23 @@ export default function AdminProducts() {
                         {product.availability}
                       </span>
                     </div>
+                    <div className="mt-5 flex gap-3">
+                      <button
+                        type="button"
+                        onClick={() => openModal(product)}
+                        className="flex-1 rounded-full border border-[#44352D]/20 px-4 py-3 text-sm font-medium text-[#44352D] transition-colors hover:bg-[#44352D] hover:text-white"
+                      >
+                        Edit Product
+                      </button>
 
-                    <button
-                      type="button"
-                      onClick={() => openModal(product)}
-                      className="mt-5 w-full rounded-full border border-[#44352D]/20 px-5 py-3 text-sm font-medium text-[#44352D] transition-colors hover:bg-[#44352D] hover:text-white"
-                    >
-                      Edit Product
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteProduct(product)}
+                        className="flex-1 rounded-full border border-red-200 px-4 py-3 text-sm font-medium text-red-700 transition-colors hover:bg-red-700 hover:text-white"
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </div>
                 </article>
               );
@@ -286,6 +391,9 @@ export default function AdminProducts() {
           onClose={closeModal}
           submitting={submitting}
           formError={formError}
+          onDeleteImage={handleDeleteImage}
+          deletingImageId={deletingImageId}
+          deletingAllImages={deletingAllImages}
         />
       )}
     </div>

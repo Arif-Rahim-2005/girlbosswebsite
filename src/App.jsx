@@ -11,6 +11,11 @@ import ProductDetails from "./pages/ProductsDetails";
 import AdminRoute from "./components/AdminRoute"
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminProducts from "./pages/AdminProducts";
+import AdminUsers from "./pages/AdminUsers";
+import AdminPosts from "./pages/AdminPosts"
+import Posts from "./pages/Posts"
+import PostDetail from "./pages/PostsDetails";
+
 
 
 export default function App() {
@@ -22,14 +27,17 @@ export default function App() {
         <Route path="/products" element={<Products />} />
         <Route path="/about" element={<About />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/posts" element={<Posts />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/not-authorised" element={<NotAuthorised />} />
+        <Route path="/posts/:slug" element={<PostDetail />} />
         <Route path="/products/:slug" element={<ProductDetails />} />
-
         {/* Admin dashboard */}
         <Route element={<AdminRoute />}>
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/products" element={<AdminProducts />} />
+          <Route path="/admin/users" element={<AdminUsers />} />
+          <Route path="/admin/posts" element={<AdminPosts />} />
         </Route>
       </Routes>
     </BrowserRouter>

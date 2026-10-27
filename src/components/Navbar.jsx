@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import logo from "../assets/logo.jpeg";
 
 export default function Navbar() {
 const [menuOpen, setMenuOpen] = useState(false);
@@ -9,6 +10,7 @@ const navigate = useNavigate();
 const navLinks = [
 { label: "Home", path: "/" },
 { label: "Products", path: "/products" },
+{ label: "Posts", path: "/posts" },
 { label: "About", path: "/about" },
 ];
 
@@ -19,7 +21,20 @@ return location.pathname === path;
 };
 
 const closeMenu = () => setMenuOpen(false);
-
+const handleAdminAccess = () => {
+  const token = localStorage.getItem("token");
+  const role = localStorage.getItem("role");
+  closeMenu();
+  if (!token) {
+    navigate("/login");
+    return;
+  }
+  if (role !== "admin") {
+    navigate("/not-authorised");
+    return;
+  }
+  navigate("/admin");
+};
   return (
     <header className="fixed left-0 right-0 top-0 z-50 bg-[#F5F0E7]/80 backdrop-blur-md transition-all duration-300">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 sm:px-8 lg:px-12">
@@ -27,10 +42,14 @@ const closeMenu = () => setMenuOpen(false);
         <Link
           to="/"
           onClick={closeMenu}
-          aria-label="Go to homepage"
-          className="flex items-center gap-3 transition-opacity hover:opacity-80"
+          className="flex shrink-0 items-center"
+          aria-label="Modesty Girlboss Enterprises home"
         >
-          {" "}
+          <img
+            src={logo}
+            alt="Modesty Girlboss Enterprises"
+            className="h-12 w-auto object-contain sm:h-14"
+          />
           <div className="flex flex-col leading-none">
             {" "}
             <span className="font-serif text-lg font-semibold text-[#493323]">
@@ -64,7 +83,7 @@ const closeMenu = () => setMenuOpen(false);
           {/* Admin access */}
           <button
             type="button"
-            onClick={() => navigate("/login")}
+            onClick={handleAdminAccess}
             aria-label="Admin access"
             className="flex items-center gap-1.5 rounded-full border border-neutral-300 px-3.5 py-1.5 text-xs font-medium text-neutral-500 transition-colors hover:border-[#b08a45] hover:text-[#493323]"
           >
@@ -152,10 +171,7 @@ const closeMenu = () => setMenuOpen(false);
 
             <button
               type="button"
-              onClick={() => {
-                closeMenu();
-                navigate("/login");
-              }}
+              onClick={handleAdminAccess}
               className="flex items-center gap-2 self-start text-sm font-medium text-neutral-500 hover:text-[#493323]"
             >
               Admin Access
