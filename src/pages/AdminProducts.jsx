@@ -85,10 +85,20 @@ async function handleProductSubmit(formData, validationError) {
         });
       }
     } else {
-      // Create a new product with its initial images
+      // Combine product details and images into one multipart request
+      const productFormData = new FormData();
+
+      for (const [key, value] of formData.productData.entries()) {
+        productFormData.append(key, value);
+      }
+
+      for (const image of formData.imageData.getAll("images")) {
+        productFormData.append("images", image);
+      }
+
       data = await apiRequest("/products", {
         method: "POST",
-        body: formData.productData,
+        body: productFormData,
       });
     }
 
